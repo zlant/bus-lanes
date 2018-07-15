@@ -46,7 +46,7 @@ L.Control.Link = L.Control.extend({
 
         div.appendChild(editorActivation);
         
-        //div.innerHTML += ' | <a target="_blank" href="https://github.com/zetx16/parking-lanes">GitHub</a>';
+        div.innerHTML += ' | <a target="_blank" href="https://github.com/zetx16/bus-lanes">GitHub</a>';
 
         //div.onmouseenter = e => document.getElementById('editors').style.display = 'inline';
         //div.onmouseleave = e => document.getElementById('editors').style.display = 'none';
