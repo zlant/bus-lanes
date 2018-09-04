@@ -56,63 +56,11 @@ L.Control.Link = L.Control.extend({
 
 new L.Control.Link({ position: 'bottomright' }).addTo(map);
 
-//------------- Legend control --------------------
-/*
-L.Control.Legend = L.Control.extend({
-    onAdd: map => {
-        var div = L.DomUtil.create('div', 'leaflet-control-layers control-padding control-bigfont');
-        div.innerHTML = "Legend";
-        div.onmouseenter = setLegendBody;
-        div.onmouseleave = setLegendHead;
-        div.onclick = changeLegend;
-        div.id = 'legend';
-        return div;
-    }
-});
-
-new L.Control.Legend({ position: 'bottomright' }).addTo(map);
-
-function changeLegend(e) {
-    if (this.onmouseenter == null) {
-        setLegendHead(e);
-        this.onmouseenter = setLegendBody;
-        this.onmouseleave = setLegendHead;
-    } else {
-        setLegendBody(e);
-        this.onmouseenter = this.onmouseleave = null;
-    }
-}
-
-function setLegendBody(e) {
-    e.currentTarget.innerHTML = legend
-        .map(x => "<div class='legend-element' style='background-color:" + x.color + ";'></div> " + x.text)
-        .join("<br />");
-}
-
-function setLegendHead(e) {
-    e.currentTarget.innerHTML = "Legend";
-}
-
-//------------- Datetime control --------------------
-
-L.Control.Datetime = L.Control.extend({
-    onAdd: map => {
-        var div = L.DomUtil.create('input', 'leaflet-control-layers control-padding control-bigfont');
-        div.style.width = '115px';
-        div.id = 'datetime-input';
-        div.onmousedown = div.ondblclick = div.onpointerdown = L.DomEvent.stopPropagation;
-        div.oninput = setDate;
-        return div;
-    }
-});
-
-new L.Control.Datetime({ position: 'topright' }).addTo(map);
-*/
 //------------- Info control --------------------
 
 L.Control.Info = L.Control.extend({
     onAdd: map => {
-        var div = L.DomUtil.create('div', 'leaflet-control-layers control-padding control-bigfont');
+        var div = L.DomUtil.create('div', 'leaflet-control-layers control-padding control-bigfont control-button');
         div.innerHTML = 'Zoom in on the map.';
         div.id = 'info';
         div.onclick = () => map.setZoom(viewMinZoom);
@@ -121,6 +69,25 @@ L.Control.Info = L.Control.extend({
 });
 
 new L.Control.Info({ position: 'topright' }).addTo(map);
+
+//------------- Fast control --------------------
+
+L.Control.Fast = L.Control.extend({
+    onAdd: map => {
+        var div = L.DomUtil.create('div', 'leaflet-control-layers control-padding control-bigfont control-button');
+        div.innerHTML = 'Download bbox.';
+        div.id = 'fast';
+        div.onclick = () => {
+            if (useTestServer)
+                getContent(urlOsmTest + getQueryParkingLanes(), parseContent);
+            else
+                getContent(urlOverpass + encodeURIComponent(getQueryParkingLanes()), parseContent);
+        }
+        return div;
+    }
+});
+
+new L.Control.Fast({ position: 'topright' }).addTo(map);
 
 //------------- Save control --------------------
 
