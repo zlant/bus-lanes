@@ -61,7 +61,7 @@ new L.Control.Link({ position: 'bottomright' }).addTo(map);
 L.Control.Info = L.Control.extend({
     onAdd: map => {
         var div = L.DomUtil.create('div', 'leaflet-control-layers control-padding control-bigfont control-button');
-        div.innerHTML = 'Zoom in on the map.';
+        div.innerHTML = 'Zoom in on the map';
         div.id = 'info';
         div.onclick = () => map.setZoom(viewMinZoom);
         return div;
@@ -75,14 +75,9 @@ new L.Control.Info({ position: 'topright' }).addTo(map);
 L.Control.Fast = L.Control.extend({
     onAdd: map => {
         var div = L.DomUtil.create('div', 'leaflet-control-layers control-padding control-bigfont control-button');
-        div.innerHTML = 'Download bbox.';
+        div.innerHTML = 'Download bbox';
         div.id = 'fast';
-        div.onclick = () => {
-            if (useTestServer)
-                getContent(urlOsmTest + getQueryParkingLanes(), parseContent);
-            else
-                getContent(urlOverpass + encodeURIComponent(getQueryParkingLanes()), parseContent);
-        }
+        div.onclick = downloadHere;
         return div;
     }
 });
@@ -257,11 +252,23 @@ function mapMoveEnd() {
     if (withinLastBbox())
         return;
 
+    downloadHere();
+}
+
+function downloadHere() {
     lastBounds = map.getBounds();
+    downloading(true);
     if (useTestServer)
         getContent(urlOsmTest + getQueryParkingLanes(), parseContent);
     else
         getContent(urlOverpass + encodeURIComponent(getQueryParkingLanes()), parseContent);
+}
+
+function downloading(downloading){
+    if(downloading)
+        document.getElementById('fast').innerHTML = 'Downloading... ';
+    else
+        document.getElementById('fast').innerHTML = 'Download bbox';
 }
 
 function withinLastBbox()
@@ -296,6 +303,8 @@ function parseContent(content) {
                     waysInRelation[member.$ref] = true;
         }
     }
+
+    downloading(false)
 }
 
 function parseWay(way) {
