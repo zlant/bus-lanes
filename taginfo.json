@@ -1,0 +1,51 @@
+{
+    "data_format": 1,
+    "data_url": "https://zlant.github.io/bus-lanes/taginfo.json",
+    "project": {
+        "name": "bus_lanes",
+        "description": "Bus lanes viewer from OpenStreetMap",
+        "project_url": "https://zlant.github.io/bus-lanes/",
+        "doc_url": "https://github.com/zlant/bus-lanes"
+    },
+    "tags": [
+        { "key": "highway", "value": "motorway", "object_types": [ "way" ], "description": "major road" },
+        { "key": "highway", "value": "trunk", "object_types": [ "way" ], "description": "major road" },
+        { "key": "highway", "value": "primary", "object_types": [ "way" ], "description": "major road" },
+        { "key": "highway", "value": "secondary", "object_types": [ "way" ], "description": "major road" },
+        { "key": "highway", "value": "tertiary", "object_types": [ "way" ], "description": "major road" },
+        { "key": "highway", "value": "unclassified", "object_types": [ "way" ], "description": "major road" },
+        { "key": "highway", "value": "residential", "object_types": [ "way" ], "description": "major road" },
+
+        { "key": "lanes:bus",  "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "2", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "3", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "4", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "5", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "6", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "7", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "8", "object_types": [ "way" ] },
+        { "key": "lanes:bus", "value": "9", "object_types": [ "way" ] },
+        { "key": "lanes:bus:forward",  "object_types": [ "way" ] },
+        { "key": "lanes:bus:backward",  "object_types": [ "way" ] },
+
+        { "key": "busway:both", "value": "lane", "object_types": [ "way" ] },
+        { "key": "busway:right", "value": "lane", "object_types": [ "way" ] },
+        { "key": "busway:left", "value": "lane", "object_types": [ "way" ] },
+        { "key": "busway", "value": "lane", "object_types": [ "way" ] },
+        { "key": "busway", "value": "opposite_lane", "object_types": [ "way" ] },
+        { "key": "oneway", "value": "-1", "object_types": [ "way" ], "description": "exclusion to busway=lane on right" },
+        { "key": "oneway", "value": "yes", "object_types": [ "way" ], "description": "exclusion to busway=lane on left" },
+
+        { "key": "lanes:psv",  "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "2", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "3", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "4", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "5", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "6", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "7", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "8", "object_types": [ "way" ] },
+        { "key": "lanes:psv", "value": "9", "object_types": [ "way" ] },
+        { "key": "lanes:psv:forward",  "object_types": [ "way" ] },
+        { "key": "lanes:psv:backward",  "object_types": [ "way" ] }
+    ]
+}
