@@ -160,7 +160,7 @@ var saving = false;
 
 var viewMinZoom = 14;
 
-var highwayRegex = new RegExp('^motorway|trunk|primary|secondary|tertiary|unclassified|residential');
+var highwayRegex = new RegExp('^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service');
 
 
 // ------------- functions -------------------
@@ -385,6 +385,12 @@ function wayIsMajor(tags)
     }
 }
 
+function wayIsService(tags){
+    if (tags.find(x => x.$k == 'highway' && x.$v == 'service'))
+        return true;
+    return false;
+}
+
 function setLocationCookie() {
     var center = map.getCenter();
     var date = new Date(new Date().getTime() + 10 * 365 * 24 * 60 * 60 * 1000);
@@ -542,7 +548,7 @@ function getQueryBusLanes() {
     } else {
         var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
         return editorMode
-            ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
+            ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
             : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
     }
 }
@@ -550,7 +556,7 @@ function getQueryBusLanes() {
 function getQueryHighways() {
     var bounds = map.getBounds();
     var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
-    var tag = 'highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential"';
+    var tag = 'highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"';
     return '[out:xml];(way[' + tag + '](' + bbox + ');>;way[' + tag + '](' + bbox + ');<;);out meta;';
 }
 
@@ -637,10 +643,13 @@ function getLaneInfoPanelContent(osm) {
             form.appendChild(scissors);
         }
         */
-        var regex = new RegExp('^parking:');
         var dl = document.createElement('dl');
-        for (var side of ['right', 'left'].map(x => getTagsBlock(x, osm)))
-            dl.appendChild(side);
+        if (wayIsService(osm.tag)) {
+            dl.appendChild(getTagsBlock('middle', osm));
+        } else {
+            for (var side of ['right', 'left'].map(x => getTagsBlock(x, osm)))
+                dl.appendChild(side);
+        }
         form.appendChild(dl);
 
         var submit = document.createElement('input');
@@ -734,7 +743,11 @@ function setBacklight(osm) {
         onlyOneSide = true;
     } else {
         polyline = lanes['empty' + osm.$id].getLatLngs();
-    }
+    };
+
+    if (wayIsService(osm.tag)){
+        onlyOneSide = true;
+    };
 
     var n = 3;
 
@@ -773,44 +786,84 @@ function getTagsBlock(side, osm) {
     var div = document.createElement('div');
     div.setAttribute('id', side);
 
-    var sideAlias = side == 'right' ? 'forward' : 'backward';
-    var hotKey = side == 'right' ? 'x' : 'z';
+    if (side == "middle"){
+        var divLine = document.createElement('div');
 
-    var divLine = document.createElement('div');
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'dedicated:psv');
+        checkBoth.setAttribute('id', 'dedicated:psv');
+        checkBoth.checked = isDedicatedHighway( osm.tag);
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
 
-    var checkBoth = document.createElement('input');
-    checkBoth.style.display = 'inline';
-    checkBoth.setAttribute('type', 'checkbox');
-    checkBoth.setAttribute('name', 'lanes:psv:' + sideAlias);
-    checkBoth.setAttribute('id', 'lanes:psv:' + sideAlias);
-    checkBoth.checked = isPsvLane(side, osm.tag);
-    checkBoth.onchange = addOrUpdate;
-    divLine.appendChild(checkBoth);
+        var label = document.createElement('label');
+        label.setAttribute('for', 'dedicated:psv');
+        label.style.display = 'inline';
+        label.innerText = 'Public transport Dedicated Road';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
 
-    var label = document.createElement('label');
-    label.setAttribute('for', 'lanes:psv:' + sideAlias);
-    label.style.display = 'inline';
-    label.innerText = 'Public transport lane (' + hotKey + ')';
-    divLine.appendChild(label);
-    div.appendChild(divLine);
+        var divLine = document.createElement('div');
 
-    var divLine = document.createElement('div');
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'dedicated:bus');
+        checkBoth.setAttribute('id', 'dedicated:bus');
+        checkBoth.checked = isDedicatedHighway( osm.tag); // TODO
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
 
-    var checkBoth = document.createElement('input');
-    checkBoth.style.display = 'inline';
-    checkBoth.setAttribute('type', 'checkbox');
-    checkBoth.setAttribute('name', 'lanes:bus:' + sideAlias);
-    checkBoth.setAttribute('id', 'lanes:bus:' + sideAlias);
-    checkBoth.checked = isBusLane(side, osm.tag);
-    checkBoth.onchange = addOrUpdate;
-    divLine.appendChild(checkBoth);
+        var label = document.createElement('label');
+        label.setAttribute('for', 'dedicated:bus');
+        label.style.display = 'inline';
+        label.innerText = 'Bus Dedicated Road';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
 
-    var label = document.createElement('label');
-    label.setAttribute('for', 'lanes:bus:' + sideAlias);
-    label.style.display = 'inline';
-    label.innerText = 'Only bus lane';
-    divLine.appendChild(label);
-    div.appendChild(divLine);
+    } else {
+        var sideAlias = side == 'right' ? 'forward' : 'backward';
+        var hotKey = side == 'right' ? 'x' : 'z';
+
+        var divLine = document.createElement('div');
+
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'lanes:psv:' + sideAlias);
+        checkBoth.setAttribute('id', 'lanes:psv:' + sideAlias);
+        checkBoth.checked = isPsvLane(side, osm.tag);
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
+
+        var label = document.createElement('label');
+        label.setAttribute('for', 'lanes:psv:' + sideAlias);
+        label.style.display = 'inline';
+        label.innerText = 'Public transport lane (' + hotKey + ')';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
+
+        var divLine = document.createElement('div');
+
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'lanes:bus:' + sideAlias);
+        checkBoth.setAttribute('id', 'lanes:bus:' + sideAlias);
+        checkBoth.checked = isBusLane(side, osm.tag);
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
+
+        var label = document.createElement('label');
+        label.setAttribute('for', 'lanes:bus:' + sideAlias);
+        label.style.display = 'inline';
+        label.innerText = 'Only bus lane';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
+    }
+
 
     /*
     var table = document.createElement('table');
