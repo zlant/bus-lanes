@@ -368,10 +368,15 @@ function isPsvLane(side, tags) {
     return false;
 }
 
+function isBusRoad(tags) {
+    return (tags.find(tg => tg.$k == 'bus' && tg.$v == 'yes'))
+}
+function isPsvRoad(tags) {
+    return (tags.find(tg => tg.$k == 'psv' && tg.$v == 'yes'))
+}
+
 function isDedicatedHighway(tags) {
-    if (tags.find(x => x.$k == 'bus' || x.$k == 'psv'))
-        return true;
-    return false;
+    return isPsvRoad(tags) || isBusRoad(tags);
 }
 
 function wayIsMajor(tags)
@@ -733,7 +738,7 @@ function getLaneInfoPanelContent(osm) {
 
 function setBacklight(osm) {
     var onlyOneSide = false;
-    polyline = [];
+    var polyline = [];
     if (lanes['right' + osm.$id]){
         polyline = lanes['right' + osm.$id].getLatLngs();
     } else if (lanes['left' + osm.$id]) {
@@ -792,14 +797,14 @@ function getTagsBlock(side, osm) {
         var checkBoth = document.createElement('input');
         checkBoth.style.display = 'inline';
         checkBoth.setAttribute('type', 'checkbox');
-        checkBoth.setAttribute('name', 'dedicated:psv');
-        checkBoth.setAttribute('id', 'dedicated:psv');
-        checkBoth.checked = isDedicatedHighway( osm.tag);
+        checkBoth.setAttribute('name', 'psv');
+        checkBoth.setAttribute('id', 'psv');
+        checkBoth.checked = isPsvRoad( osm.tag);
         checkBoth.onchange = addOrUpdate;
         divLine.appendChild(checkBoth);
 
         var label = document.createElement('label');
-        label.setAttribute('for', 'dedicated:psv');
+        label.setAttribute('for', 'psv');
         label.style.display = 'inline';
         label.innerText = 'Public transport Dedicated Road';
         divLine.appendChild(label);
@@ -810,14 +815,14 @@ function getTagsBlock(side, osm) {
         var checkBoth = document.createElement('input');
         checkBoth.style.display = 'inline';
         checkBoth.setAttribute('type', 'checkbox');
-        checkBoth.setAttribute('name', 'dedicated:bus');
-        checkBoth.setAttribute('id', 'dedicated:bus');
-        checkBoth.checked = isDedicatedHighway( osm.tag); // TODO
+        checkBoth.setAttribute('name', 'bus');
+        checkBoth.setAttribute('id', 'bus');
+        checkBoth.checked = isBusRoad( osm.tag); 
         checkBoth.onchange = addOrUpdate;
         divLine.appendChild(checkBoth);
 
         var label = document.createElement('label');
-        label.setAttribute('for', 'dedicated:bus');
+        label.setAttribute('for', 'bus');
         label.style.display = 'inline';
         label.innerText = 'Bus Dedicated Road';
         divLine.appendChild(label);
@@ -1014,24 +1019,35 @@ function oninputTimeIntervalTag() {
 
 function addOrUpdate() {
     var obj = formToOsmWay(this.form);
-    var polyline;
-    if (lanes['right' + obj.$id])
+    var polyline = [];
+    if (lanes['right' + obj.$id]){
         polyline = lanes['right' + obj.$id].getLatLngs();
-    else if (lanes['left' + obj.$id])
+    } else if (lanes['left' + obj.$id]) {
         polyline = lanes['left' + obj.$id].getLatLngs();
-    else if (lanes['empty' + obj.$id])
+    } else if (lanes['middle' + obj.$id]){
+        polyline = lanes['middle' + obj.$id].getLatLngs();
+    } else {
         polyline = lanes['empty' + obj.$id].getLatLngs();
-
+    };
 
     var emptyway = true;
     for (var side of ['right', 'left']) {
-        //var conditions = confirmSide(side, obj.tag);
         var id = side == 'right' ? 'right' + obj.$id : 'left' + obj.$id;
         if (confirmSide(side, obj.tag)) {
             if (!lanes[id]) {
                 var isMajor = wayIsMajor(obj.tag);
                 addLane(polyline, null, side, obj, (isMajor ? offsetMajor : offsetMinor), isMajor);
             }
+            emptyway = false;
+        } else if (lanes[id]) {
+            lanes[id].remove();
+            delete lanes[id];
+        }
+    }
+    if (isDedicatedHighway(obj.tag)) {
+        var id = 'middle' + obj.$id;
+        if (!lanes[id]) {
+            addLane(polyline, null, 'middle', obj, isMajor ? offsetMajor : offsetMinor, isMajor);
             emptyway = false;
         } else if (lanes[id]) {
             lanes[id].remove();
@@ -1062,14 +1078,26 @@ function chooseSideTags(form, side) {
 }
 
 function formToOsmWay(form) {
-    var regex = new RegExp('^(?:lanes:(?:psv|bus)|busway)');
+    var laneRegex = new RegExp('^(?:lanes:(?:psv|bus)|busway)');
+    var roadRegex = new RegExp('^(psv|bus)|access');
     var osm = ways[form.id];
-    osm.tag = osm.tag.filter(tag => !regex.test(tag.$k));
 
-    for (var input of form)
-        if (regex.test(input.name) && input.checked) {
-            osm.tag.push({ $k: input.name, $v: '1' })
+    if (wayIsService(osm.tag)){
+        osm.tag = osm.tag.filter(tag => !roadRegex.test(tag.$k));
+        for (var input of form){
+            if (roadRegex.test(input.name) && input.checked) {
+                osm.tag.push({ $k: input.name, $v: 'yes' })
+                osm.tag.push({ $k: 'access', $v: 'no' })
+            }
         }
+    } else {
+        osm.tag = osm.tag.filter(tag => !laneRegex.test(tag.$k));
+        for (var input of form){
+            if (laneRegex.test(input.name) && input.checked) {
+                osm.tag.push({ $k: input.name, $v: '1' })
+            }
+        }
+    }
     return osm;
 }
 
