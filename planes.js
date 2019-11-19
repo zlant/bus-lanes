@@ -1,4 +1,4 @@
-var map = L.map('map', { fadeAnimation: false });
+﻿var map = L.map('map', { fadeAnimation: false });
 var hash = new L.Hash(map);
 
 if (document.location.href.indexOf('#') == -1)
@@ -499,7 +499,7 @@ function addLane(line, conditions, side, osm, offset, isMajor) {
         'empty': 'black',
         'left': 'dodgerblue',
         'right': 'dodgerblue',
-        'middle': 'lightgreen'
+        'middle': 'limegreen'
     }
 
     var lanes_offsets = {
@@ -763,7 +763,7 @@ function setBacklight(osm) {
     if (onlyOneSide){
         lanes['middle'] = L.polyline(polyline,
             {
-                color: 'green',
+                color: 'limegreen',
                 weight: offsetMajor * n - 4,
                 offset: 0,
                 opacity: 0.4
