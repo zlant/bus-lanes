@@ -1,4 +1,4 @@
-﻿var map = L.map('map', { fadeAnimation: false });
+var map = L.map('map', { fadeAnimation: false });
 var hash = new L.Hash(map);
 
 if (document.location.href.indexOf('#') == -1)
@@ -236,7 +236,11 @@ function mapMoveEnd() {
     for (var lane in lanes) {
         if (lane === 'right' || lane === 'left' || lane.startsWith('empty'))
             continue;
-        var sideOffset = lanes[lane].options.offset > 0 ? 1 : -1;
+        var sideOffset
+        if (lane.startsWith('middle'))
+            sideOffset = 0
+        else
+            sideOffset = lanes[lane].options.offset > 0 ? 1 : -1;
         var isMajor = lanes[lane].options.isMajor;
         lanes[lane].setOffset(sideOffset * (isMajor ? offsetMajor : offsetMinor));
         lanes[lane].setStyle({ weight: (isMajor ? weightMajor : weightMinor) });
