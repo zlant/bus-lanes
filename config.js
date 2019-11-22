@@ -1,5 +1,5 @@
 var editorName = 'BusLanes'
-var version = '0.1'
+var version = '0.2.0'
 
 var valuesLane = ['parallel', 'diagonal', 'perpendicular', 'no_parking', 'no_stopping', 'marked', 'fire_lane'];
 var valuesCond = ['free', 'ticket', 'disc', 'residents', 'customers', 'private'];
