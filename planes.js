@@ -29,7 +29,7 @@ L.Control.Link = L.Control.extend({
 
         var editorActivation = document.createElement('span');
         editorActivation.id = 'editorActive';
-        
+
         var editorCheckBox = document.createElement('input');
         editorCheckBox.setAttribute('type', 'checkbox');
         editorCheckBox.setAttribute('id', 'editorcb');
@@ -45,7 +45,7 @@ L.Control.Link = L.Control.extend({
         editorActivation.appendChild(label);
 
         div.appendChild(editorActivation);
-        
+
         div.innerHTML += ' | <a target="_blank" href="https://github.com/zetx16/bus-lanes">GitHub</a>';
 
         //div.onmouseenter = e => document.getElementById('editors').style.display = 'inline';
@@ -160,7 +160,7 @@ var saving = false;
 
 var viewMinZoom = 14;
 
-var highwayRegex = new RegExp('^motorway|trunk|primary|secondary|tertiary|unclassified|residential');
+var highwayRegex = new RegExp('^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service');
 
 
 // ------------- functions -------------------
@@ -198,7 +198,7 @@ function mapMoveEnd() {
     document.getElementById('id-bbox').href = urlID + '#map=' +
         document.location.href.substring(document.location.href.indexOf('#') + 1);
     setLocationCookie();
-    
+
     var zoom = map.getZoom();
 
     if (zoom <= 12) {
@@ -236,7 +236,11 @@ function mapMoveEnd() {
     for (var lane in lanes) {
         if (lane === 'right' || lane === 'left' || lane.startsWith('empty'))
             continue;
-        var sideOffset = lanes[lane].options.offset > 0 ? 1 : -1;
+        var sideOffset
+        if (lane.startsWith('middle'))
+            sideOffset = 0
+        else
+            sideOffset = lanes[lane].options.offset > 0 ? 1 : -1;
         var isMajor = lanes[lane].options.isMajor;
         lanes[lane].setOffset(sideOffset * (isMajor ? offsetMajor : offsetMinor));
         lanes[lane].setStyle({ weight: (isMajor ? weightMajor : weightMinor) });
@@ -259,9 +263,9 @@ function downloadHere() {
     lastBounds = map.getBounds();
     downloading(true);
     if (useTestServer)
-        getContent(urlOsmTest + getQueryParkingLanes(), parseContent);
+        getContent(urlOsmTest + getQueryBusLanes(), parseContent);
     else
-        getContent(urlOverpass + encodeURIComponent(getQueryParkingLanes()), parseContent);
+        getContent(urlOverpass + encodeURIComponent(getQueryBusLanes()), parseContent);
 }
 
 function downloading(downloading){
@@ -329,6 +333,10 @@ function parseWay(way) {
             emptyway = false;
         }
     }
+    if (isDedicatedHighway(way.tag)) {
+        addLane(polyline, null, 'middle', way, isMajor ? offsetMajor : offsetMinor, isMajor);
+        emptyway = false;
+    }
     if (editorMode && emptyway && way.tag.filter(x => x.$k == 'highway' && highwayRegex.test(x.$v)).length > 0)
         addLane(polyline, null, 'empty', way, 0, isMajor);
 }
@@ -364,6 +372,17 @@ function isPsvLane(side, tags) {
     return false;
 }
 
+function isBusRoad(tags) {
+    return (tags.find(tg => tg.$k == 'bus' && tg.$v == 'yes'))
+}
+function isPsvRoad(tags) {
+    return (tags.find(tg => tg.$k == 'psv' && tg.$v == 'yes'))
+}
+
+function isDedicatedHighway(tags) {
+    return isPsvRoad(tags) || isBusRoad(tags);
+}
+
 function wayIsMajor(tags)
 {
     var findResult = tags.find(x => x.$k == 'highway');
@@ -373,6 +392,12 @@ function wayIsMajor(tags)
         else
             return false;
     }
+}
+
+function wayIsService(tags){
+    if (tags.find(x => x.$k == 'highway' && x.$v == 'service'))
+        return true;
+    return false;
 }
 
 function setLocationCookie() {
@@ -464,19 +489,31 @@ function getConditions(side, tags) {
 
     if (legend.findIndex(x => x.condition === conditions.default) == -1)
         conditions.default = null;
-    
+
     return conditions;
 }
 
 function addLane(line, conditions, side, osm, offset, isMajor) {
     var id = side + osm.$id;
-    var color = side == 'empty' ? 'black' : 'dodgerblue';
+    var lanes_colors = {
+        'empty': 'black',
+        'left': 'dodgerblue',
+        'right': 'dodgerblue',
+        'middle': 'limegreen'
+    }
+
+    var lanes_offsets = {
+        'empty':-offset,
+        'left':-offset,
+        'right':offset,
+        'middle':0
+    }
 
     lanes[id] = L.polyline(line,
         {
-            color: color,
+            color: lanes_colors[side],
             weight: isMajor ? weightMajor : weightMinor,
-            offset: side == 'right' ? offset : -offset,
+            offset: lanes_offsets[side],
             conditions: conditions,
             osm: osm,
             isMajor: isMajor
@@ -512,7 +549,7 @@ function getColorByDate(conditions) {
     return getColor(conditions.default);
 }
 
-function getQueryParkingLanes() {
+function getQueryBusLanes() {
     var bounds = map.getBounds();
     if (useTestServer) {
         var bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(',');
@@ -520,15 +557,15 @@ function getQueryParkingLanes() {
     } else {
         var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
         return editorMode
-            ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
-            : '[out:xml];(way[highway][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');)->.a;(.a;.a >;);out meta;';
+            ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
+            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
     }
 }
 
 function getQueryHighways() {
     var bounds = map.getBounds();
     var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
-    var tag = 'highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential"';
+    var tag = 'highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"';
     return '[out:xml];(way[' + tag + '](' + bbox + ');>;way[' + tag + '](' + bbox + ');<;);out meta;';
 }
 
@@ -615,10 +652,13 @@ function getLaneInfoPanelContent(osm) {
             form.appendChild(scissors);
         }
         */
-        var regex = new RegExp('^parking:');
         var dl = document.createElement('dl');
-        for (var side of ['right', 'left'].map(x => getTagsBlock(x, osm)))
-            dl.appendChild(side);
+        if (wayIsService(osm.tag)) {
+            dl.appendChild(getTagsBlock('middle', osm));
+        } else {
+            for (var side of ['right', 'left'].map(x => getTagsBlock(x, osm)))
+                dl.appendChild(side);
+        }
         form.appendChild(dl);
 
         var submit = document.createElement('input');
@@ -654,19 +694,32 @@ function getLaneInfoPanelContent(osm) {
         return div;
     }
     else {
+        var onlyOneSide = false;
         var getTagsBlockForViewer = function (tags, side, sideAlias) {
             var regex = new RegExp('^lanes:(psv|bus)(?::' + sideAlias + ')?$');
             var buswayRegex = new RegExp('^busway(?::(?:both|' + side + '))?$');
 
             var tagsBlock = document.createElement('div');
-            tagsBlock.id = side;
 
             if (isBusLane(side, tags) || isPsvLane(side, tags)) {
+                tagsBlock.id = side;
                 tagsBlock.innerHTML = tags
                     .filter(tag => regex.test(tag.$k) ||
                         (tag.$k == 'lanes:bus' && (side == 'left' ? /^[2-9]$/.test(tag.$v) : true)) ||
                         (buswayRegex.test(tag.$k) && tag.$v == 'lane') ||
                         (side == 'left' && tag.$k == 'busway' && tag.$v == 'opposite_lane'))
+                    .map(tag => tag.$k + ' = ' + tag.$v)
+                    .join('<br />');
+            }
+            if (isDedicatedHighway(tags)) {
+                onlyOneSide = true;
+                tagsBlock.id = 'middle';
+                tagsBlock.innerHTML = tags
+                    .filter(tag =>
+                        (tag.$k == 'bus' && tag.$v == 'yes') ||
+                        (tag.$k == 'psv' && tag.$v == 'yes') ||
+                        (tag.$k == 'motor_vehicle' && tag.$v == 'no') ||
+                        (tag.$k == 'access' && tag.$v == 'no'))
                     .map(tag => tag.$k + ' = ' + tag.$v)
                     .join('<br />');
             }
@@ -679,83 +732,148 @@ function getLaneInfoPanelContent(osm) {
         div.appendChild(head);
         div.appendChild(document.createElement('hr'));
         div.appendChild(getTagsBlockForViewer(osm.tag, 'right', 'forward'));
-        div.appendChild(getTagsBlockForViewer(osm.tag, 'left', 'backward'));
+        if (!onlyOneSide) {
+            div.appendChild(getTagsBlockForViewer(osm.tag, 'left', 'backward'));
+        }
 
         return div;
     }
 }
 
 function setBacklight(osm) {
-    var polyline = lanes['right' + osm.$id]
-        ? lanes['right' + osm.$id].getLatLngs()
-        : lanes['left' + osm.$id]
-            ? lanes['left' + osm.$id].getLatLngs()
-            : lanes['empty' + osm.$id].getLatLngs();
+    var onlyOneSide = false;
+    var polyline = [];
+    if (lanes['right' + osm.$id]){
+        polyline = lanes['right' + osm.$id].getLatLngs();
+    } else if (lanes['left' + osm.$id]) {
+        polyline = lanes['left' + osm.$id].getLatLngs();
+    } else if (lanes['middle' + osm.$id]){
+        polyline = lanes['middle' + osm.$id].getLatLngs();
+        onlyOneSide = true;
+    } else {
+        polyline = lanes['empty' + osm.$id].getLatLngs();
+    };
+
+    if (wayIsService(osm.tag)){
+        onlyOneSide = true;
+    };
 
     var n = 3;
 
-    lanes['right'] = L.polyline(polyline,
-        {
-            color: 'fuchsia',
-            weight: offsetMajor * n - 4,
-            offset: offsetMajor * n,
-            opacity: 0.4
-        })
-        .addTo(map);
+    if (onlyOneSide){
+        lanes['middle'] = L.polyline(polyline,
+            {
+                color: 'limegreen',
+                weight: offsetMajor * n - 4,
+                offset: 0,
+                opacity: 0.4
+            })
+            .addTo(map);
 
-    lanes['left'] = L.polyline(polyline,
-        {
-            color: 'cyan',
-            weight: offsetMajor * n - 4,
-            offset: -offsetMajor * n,
-            opacity: 0.4
-        })
-        .addTo(map);
+    } else {
+        lanes['right'] = L.polyline(polyline,
+            {
+                color: 'fuchsia',
+                weight: offsetMajor * n - 4,
+                offset: offsetMajor * n,
+                opacity: 0.4
+            })
+            .addTo(map);
+
+        lanes['left'] = L.polyline(polyline,
+            {
+                color: 'cyan',
+                weight: offsetMajor * n - 4,
+                offset: -offsetMajor * n,
+                opacity: 0.4
+            })
+            .addTo(map);
+    }
 }
 
 function getTagsBlock(side, osm) {
     var div = document.createElement('div');
     div.setAttribute('id', side);
 
-    var sideAlias = side == 'right' ? 'forward' : 'backward';
-    var hotKey = side == 'right' ? 'x' : 'z';
-    
-    var divLine = document.createElement('div');
+    if (side == "middle"){
+        var divLine = document.createElement('div');
 
-    var checkBoth = document.createElement('input');
-    checkBoth.style.display = 'inline';
-    checkBoth.setAttribute('type', 'checkbox');
-    checkBoth.setAttribute('name', 'lanes:psv:' + sideAlias);
-    checkBoth.setAttribute('id', 'lanes:psv:' + sideAlias);
-    checkBoth.checked = isPsvLane(side, osm.tag);
-    checkBoth.onchange = addOrUpdate;
-    divLine.appendChild(checkBoth);
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'psv');
+        checkBoth.setAttribute('id', 'psv');
+        checkBoth.checked = isPsvRoad( osm.tag);
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
 
-    var label = document.createElement('label');
-    label.setAttribute('for', 'lanes:psv:' + sideAlias);
-    label.style.display = 'inline';
-    label.innerText = 'Public transport lane (' + hotKey + ')';
-    divLine.appendChild(label);
-    div.appendChild(divLine);
+        var label = document.createElement('label');
+        label.setAttribute('for', 'psv');
+        label.style.display = 'inline';
+        label.innerText = 'Public transport Dedicated Road';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
 
-    var divLine = document.createElement('div');
+        var divLine = document.createElement('div');
 
-    var checkBoth = document.createElement('input');
-    checkBoth.style.display = 'inline';
-    checkBoth.setAttribute('type', 'checkbox');
-    checkBoth.setAttribute('name', 'lanes:bus:' + sideAlias);
-    checkBoth.setAttribute('id', 'lanes:bus:' + sideAlias);
-    checkBoth.checked = isBusLane(side, osm.tag);
-    checkBoth.onchange = addOrUpdate;
-    divLine.appendChild(checkBoth);
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'bus');
+        checkBoth.setAttribute('id', 'bus');
+        checkBoth.checked = isBusRoad( osm.tag); 
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
 
-    var label = document.createElement('label');
-    label.setAttribute('for', 'lanes:bus:' + sideAlias);
-    label.style.display = 'inline';
-    label.innerText = 'Only bus lane';
-    divLine.appendChild(label);
-    div.appendChild(divLine);
-    
+        var label = document.createElement('label');
+        label.setAttribute('for', 'bus');
+        label.style.display = 'inline';
+        label.innerText = 'Bus Dedicated Road';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
+
+    } else {
+        var sideAlias = side == 'right' ? 'forward' : 'backward';
+        var hotKey = side == 'right' ? 'x' : 'z';
+
+        var divLine = document.createElement('div');
+
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'lanes:psv:' + sideAlias);
+        checkBoth.setAttribute('id', 'lanes:psv:' + sideAlias);
+        checkBoth.checked = isPsvLane(side, osm.tag);
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
+
+        var label = document.createElement('label');
+        label.setAttribute('for', 'lanes:psv:' + sideAlias);
+        label.style.display = 'inline';
+        label.innerText = 'Public transport lane (' + hotKey + ')';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
+
+        var divLine = document.createElement('div');
+
+        var checkBoth = document.createElement('input');
+        checkBoth.style.display = 'inline';
+        checkBoth.setAttribute('type', 'checkbox');
+        checkBoth.setAttribute('name', 'lanes:bus:' + sideAlias);
+        checkBoth.setAttribute('id', 'lanes:bus:' + sideAlias);
+        checkBoth.checked = isBusLane(side, osm.tag);
+        checkBoth.onchange = addOrUpdate;
+        divLine.appendChild(checkBoth);
+
+        var label = document.createElement('label');
+        label.setAttribute('for', 'lanes:bus:' + sideAlias);
+        label.style.display = 'inline';
+        label.innerText = 'Only bus lane';
+        divLine.appendChild(label);
+        div.appendChild(divLine);
+    }
+
+
     /*
     var table = document.createElement('table');
 
@@ -815,7 +933,7 @@ function getTagsBlock(side, osm) {
         var dd = document.createElement('td');
         tagval.onchange = addOrUpdate;
         dd.appendChild(tagval);
-        
+
         if (regexTimeInt.test(tag))
             hideDefault = tagval.value === '';
         else if (regexDefault.test(tag) && hideDefault)
@@ -873,7 +991,7 @@ function cutWay(arg) {
 
     ways[newWay.$id] = newWay;
     parseWay(newWay);
-    
+
     change.osmChange.create.way.push(newWay);
 
     if (oldWay.$id > 0) {
@@ -905,24 +1023,35 @@ function oninputTimeIntervalTag() {
 
 function addOrUpdate() {
     var obj = formToOsmWay(this.form);
-    var polyline;
-    if (lanes['right' + obj.$id])
+    var polyline = [];
+    if (lanes['right' + obj.$id]){
         polyline = lanes['right' + obj.$id].getLatLngs();
-    else if (lanes['left' + obj.$id])
+    } else if (lanes['left' + obj.$id]) {
         polyline = lanes['left' + obj.$id].getLatLngs();
-    else if (lanes['empty' + obj.$id])
+    } else if (lanes['middle' + obj.$id]){
+        polyline = lanes['middle' + obj.$id].getLatLngs();
+    } else {
         polyline = lanes['empty' + obj.$id].getLatLngs();
-
+    };
 
     var emptyway = true;
     for (var side of ['right', 'left']) {
-        //var conditions = confirmSide(side, obj.tag);
         var id = side == 'right' ? 'right' + obj.$id : 'left' + obj.$id;
         if (confirmSide(side, obj.tag)) {
             if (!lanes[id]) {
                 var isMajor = wayIsMajor(obj.tag);
                 addLane(polyline, null, side, obj, (isMajor ? offsetMajor : offsetMinor), isMajor);
             }
+            emptyway = false;
+        } else if (lanes[id]) {
+            lanes[id].remove();
+            delete lanes[id];
+        }
+    }
+    if (isDedicatedHighway(obj.tag)) {
+        var id = 'middle' + obj.$id;
+        if (!lanes[id]) {
+            addLane(polyline, null, 'middle', obj, isMajor ? offsetMajor : offsetMinor, isMajor);
             emptyway = false;
         } else if (lanes[id]) {
             lanes[id].remove();
@@ -946,21 +1075,33 @@ function chooseSideTags(form, side) {
     var regex = new RegExp('^parking:.*' + side);
 
     for (var input of form)
-        if (regex.test(input.name) && input.value != '') 
+        if (regex.test(input.name) && input.value != '')
             return true;
-        
+
     return false;
 }
 
 function formToOsmWay(form) {
-    var regex = new RegExp('^(?:lanes:(?:psv|bus)|busway)');
+    var laneRegex = new RegExp('^(?:lanes:(?:psv|bus)|busway)');
+    var roadRegex = new RegExp('^(psv|bus)|access');
     var osm = ways[form.id];
-    osm.tag = osm.tag.filter(tag => !regex.test(tag.$k));
 
-    for (var input of form)
-        if (regex.test(input.name) && input.checked) {
-            osm.tag.push({ $k: input.name, $v: '1' })
+    if (wayIsService(osm.tag)){
+        osm.tag = osm.tag.filter(tag => !roadRegex.test(tag.$k));
+        for (var input of form){
+            if (roadRegex.test(input.name) && input.checked) {
+                osm.tag.push({ $k: input.name, $v: 'yes' })
+                osm.tag.push({ $k: 'access', $v: 'no' })
+            }
         }
+    } else {
+        osm.tag = osm.tag.filter(tag => !laneRegex.test(tag.$k));
+        for (var input of form){
+            if (laneRegex.test(input.name) && input.checked) {
+                osm.tag.push({ $k: input.name, $v: '1' })
+            }
+        }
+    }
     return osm;
 }
 
@@ -972,7 +1113,7 @@ function save(form) {
     delete osm.$timestamp;
 
     var index = change.osmChange.modify.way.findIndex(x => x.$id == osm.$id);
-    
+
     if (osm.$id > 0) {
         var index = change.osmChange.modify.way.findIndex(x => x.$id == osm.$id);
         if (index > -1)
@@ -1092,6 +1233,8 @@ function closeLaneInfo(e) {
         lanes['right'].remove();
     if (lanes['left'])
         lanes['left'].remove();
+    if (lanes['middle'])
+            lanes['middle'].remove();
 }
 
 document.onkeydown = function (e) {
