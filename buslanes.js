@@ -48,8 +48,6 @@ L.Control.Link = L.Control.extend({
 
         div.innerHTML += ' | <a target="_blank" href="https://github.com/zetx16/bus-lanes">GitHub</a>';
 
-        //div.onmouseenter = e => document.getElementById('editors').style.display = 'inline';
-        //div.onmouseleave = e => document.getElementById('editors').style.display = 'none';
         return div;
     }
 });
@@ -275,8 +273,7 @@ function downloading(downloading){
         document.getElementById('fast').innerHTML = 'Download bbox';
 }
 
-function withinLastBbox()
-{
+function withinLastBbox(){
     if (lastBounds == undefined)
         return false;
 
@@ -383,8 +380,7 @@ function isDedicatedHighway(tags) {
     return isPsvRoad(tags) || isBusRoad(tags);
 }
 
-function wayIsMajor(tags)
-{
+function wayIsMajor(tags){
     var findResult = tags.find(x => x.$k == 'highway');
     if (findResult) {
         if (findResult.$v.search(/^motorway|trunk|primary|secondary|tertiary|unclassified|residential/) >= 0)
@@ -411,86 +407,15 @@ function setViewFromCookie() {
     if (location == undefined)
         return false;
     location = location.split('=')[1].split('/');
-
     map.setView([location[1], location[2]], location[0]);
     return true;
-}
+}  
 
-function setDate() {
-    datetime = new Date(document.getElementById('datetime-input').value);
-    redraw();
-}
-
-function redraw() {
-    for (var lane in lanes)
-        lanes[lane].setStyle({ color: getColorByDate(lanes[lane].options.conditions) });
-}
-
-function getContent(url, callback)
-{
+function getContent(url, callback){
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
     xhr.onload = () => callback(JXON.stringToJs(xhr.responseText));
     xhr.send();
-}
-
-function getConditions(side, tags) {
-    var conditions = { intervals: [], default: null };
-    var sides = ['both', side];
-
-    var defaultTags = sides.map(side => 'parking:condition:' + side + ':default')
-        .concat(sides.map(side => 'parking:lane:' + side));
-
-    var findResult;
-    for (var tag of defaultTags) {
-        findResult = tags.find(x => x.$k == tag);
-        if (findResult)
-            conditions.default = findResult.$v;
-        if (conditions.default)
-            break;
-    }
-
-    for (var i = 1; i < 10; i++) {
-        var index = i > 1 ? ':' + i : '';
-
-        var laneTags = sides.map(side => 'parking:lane:' + side + index);
-        var conditionTags = sides.map(side => 'parking:condition:' + side + index);
-        var intervalTags = sides.map(side => 'parking:condition:' + side + index + ':time_interval');
-
-        var cond = {};
-
-        for (var j = 0; j < sides.length; j++) {
-            findResult = tags.find(x => x.$k == laneTags[j]);
-            if (findResult && legend.findIndex(x => x.condition === findResult.$v) >= 0)
-                cond.condition = findResult.$v;
-            findResult = tags.find(x => x.$k == conditionTags[j]);
-            if (findResult)
-                cond.condition = findResult.$v;
-            findResult = tags.find(x => x.$k == intervalTags[j]);
-            if (findResult)
-                cond.interval = !/\d+-\d+\/\d+$/.test(findResult.$v)
-                    ? new opening_hours(findResult.$v, null, 0)
-                    : parseInt(findResult.$v.match(/\d+/g)[0]) % 2 == 0
-                        ? 'even'
-                        : 'odd';
-        }
-
-        if (i == 1 && cond.interval == undefined) {
-            if ('condition' in cond)
-                conditions.default = cond.condition;
-            break;
-        }
-
-        if ('condition' in cond)
-            conditions.intervals[i - 1] = cond;
-        else
-            break;
-    }
-
-    if (legend.findIndex(x => x.condition === conditions.default) == -1)
-        conditions.default = null;
-
-    return conditions;
 }
 
 function addLane(line, conditions, side, osm, offset, isMajor) {
@@ -530,25 +455,6 @@ function showLaneInfo(e) {
     map.originalEvent.preventDefault();
 }
 
-function getColor(condition) {
-    for (var element of legend)
-        if (condition == element.condition)
-            return element.color;
-}
-
-function getColorByDate(conditions) {
-    if (!conditions)
-        return 'black';
-    for (var interval of conditions.intervals)
-        if (interval.interval == 'even' || interval.interval == 'odd') {
-            if ((interval.interval == 'even' && datetime.getDate() % 2 == 0) ||
-                (interval.interval == 'odd' && datetime.getDate() % 2 == 1))
-                return getColor(interval.condition);
-        } else if (interval.interval && interval.interval.getState(datetime))
-            return getColor(interval.condition);
-    return getColor(conditions.default);
-}
-
 function getQueryBusLanes() {
     var bounds = map.getBounds();
     if (useTestServer) {
@@ -572,14 +478,6 @@ function getQueryHighways() {
 function getQueryOsmId(id) {
     return '[out:xml];(way(id:' + id + ');>;way(id:' + id + ');<;);out meta;';
 }
-
-var tagsBlock = [
-    "parking:lane:{side}",
-    "parking:condition:{side}",
-    "parking:condition:{side}:time_interval",
-    "parking:condition:{side}:default",
-    "parking:condition:{side}:capacity"
-];
 
 function getLaneInfoPanelContent(osm) {
     setBacklight(osm);
@@ -620,38 +518,7 @@ function getLaneInfoPanelContent(osm) {
             save(e);
             closeLaneInfo();
         };
-        /*
-        var checkBoth = document.createElement('input');
-        checkBoth.style.display = 'inline';
-        checkBoth.setAttribute('type', 'checkbox');
-        checkBoth.setAttribute('id', 'checkboth');
-        checkBoth.onchange = (ch) => {
-            if (ch.currentTarget.checked) {
-                document.getElementById("right").style.display = 'none';
-                document.getElementById("left").style.display = 'none';
-                document.getElementById("both").style.display = 'block';
-            } else {
-                document.getElementById("right").style.display = 'block';
-                document.getElementById("left").style.display = 'block';
-                document.getElementById("both").style.display = 'none';
-            }
-        };
-        form.appendChild(checkBoth);
 
-        var label = document.createElement('label');
-        label.setAttribute('for', 'checkboth');
-        label.style.display = 'inline';
-        label.innerText = 'Both';
-        form.appendChild(label);*/
-        /*
-        if (!waysInRelation[osm.$id]) {
-            var scissors = document.createElement('span');
-            scissors.className = 'float-right symb-icon';
-            scissors.innerText = '✂';
-            scissors.onclick = () => showNodes(osm);
-            form.appendChild(scissors);
-        }
-        */
         var dl = document.createElement('dl');
         if (wayIsService(osm.tag)) {
             dl.appendChild(getTagsBlock('middle', osm));
@@ -671,19 +538,6 @@ function getLaneInfoPanelContent(osm) {
         cancel.setAttribute('value', 'Cancel');
         cancel.onclick =  () => removeFromOsmChangeset(osm.$id);
         form.appendChild(cancel);
-        /*
-        if ((chooseSideTags(form, 'right') || chooseSideTags(form, 'left')) || !chooseSideTags(form, 'both')) {
-            form[0].checked = false;
-            dl.childNodes[0].style.display = 'none';
-            dl.childNodes[1].style.display = 'block';
-            dl.childNodes[2].style.display = 'block';
-        } else {
-            form[0].checked = true;
-            dl.childNodes[0].style.display = 'block';
-            dl.childNodes[1].style.display = 'none';
-            dl.childNodes[2].style.display = 'none';
-        }
-        */
 
         var div = document.createElement('div');
         div.id = 'infoContent';
@@ -821,7 +675,7 @@ function getTagsBlock(side, osm) {
         checkBoth.setAttribute('type', 'checkbox');
         checkBoth.setAttribute('name', 'bus');
         checkBoth.setAttribute('id', 'bus');
-        checkBoth.checked = isBusRoad( osm.tag); 
+        checkBoth.checked = isBusRoad( osm.tag);
         checkBoth.onchange = addOrUpdate;
         divLine.appendChild(checkBoth);
 
@@ -873,152 +727,7 @@ function getTagsBlock(side, osm) {
         div.appendChild(divLine);
     }
 
-
-    /*
-    var table = document.createElement('table');
-
-    for (var tag of tagsBlock) {
-        tag = tag.replace('{side}', side);
-
-        var label = document.createElement('label');
-        var tagSplit = tag.split(':');
-        label.innerText = tagSplit[Math.floor(tagSplit.length / 2) * 2 - 1];
-        var inputdiv = document.createElement('tr');
-        inputdiv.id = tag;
-        var dt = document.createElement('td');
-        dt.appendChild(label);
-
-        var value = osm.tag.filter(x => x.$k === tag)[0];
-        var tagval;
-
-        if (tag == 'parking:lane:' + side) {
-            tagval = document.createElement('select');
-            var additVals = value && valuesLane.indexOf(value.$v) == -1 ? ['', value.$v] : [''];
-
-            for (var x of additVals.concat(valuesLane)) {
-                var option = document.createElement('option');
-                option.value = x;
-                option.innerText = x;
-                if (value && value.$v === x)
-                    option.setAttribute('selected', 'selected');
-                tagval.appendChild(option);
-            }
-            tagval.setAttribute('name', tag);
-        }
-        else if (tag == 'parking:condition:' + side) {
-            tagval = document.createElement('select');
-            var additVals = value && valuesCond.indexOf(value.$v) == -1 ? ['', value.$v] : [''];
-
-            for (var x of additVals.concat(valuesCond)) {
-                var option = document.createElement('option');
-                option.value = x;
-                option.innerText = x;
-                if (value && value.$v === x)
-                    option.setAttribute('selected', 'selected');
-                tagval.appendChild(option);
-            }
-            tagval.setAttribute('name', tag);
-        }
-        else {
-            tagval = document.createElement('input');
-            tagval.setAttribute('type', 'text');
-            tagval.setAttribute('placeholder', tag);
-            tagval.setAttribute('name', tag);
-            tagval.setAttribute('value', value != undefined ? value.$v : '');
-
-            if (tag.indexOf('time_interval') >= 0)
-                tagval.oninput = oninputTimeIntervalTag;
-        }
-        tagval.setAttribute('name', tag);
-        var dd = document.createElement('td');
-        tagval.onchange = addOrUpdate;
-        dd.appendChild(tagval);
-
-        if (regexTimeInt.test(tag))
-            hideDefault = tagval.value === '';
-        else if (regexDefault.test(tag) && hideDefault)
-            inputdiv.style.display = 'none';
-
-        inputdiv.appendChild(dt);
-        inputdiv.appendChild(dd);
-        table.appendChild(inputdiv);
-    }
-    div.appendChild(table);*/
     return div;
-}
-
-function showNodes(osm) {
-    for (var nd of osm.nd.slice(1, osm.nd.length - 1)) {
-        markers[nd.$ref] = L.marker(nodes[nd.$ref], { icon: cutIcon, ndId: nd.$ref, wayId: osm.$id })
-            .on('click', cutWay)
-            .addTo(map);
-    }
-}
-
-function cutWay(arg) {
-    var oldWay = ways[arg.target.options.wayId];
-    var newWay = Object.assign({}, oldWay);
-
-    var ndIndex = oldWay.nd.findIndex((e, i, a) => { return e.$ref === arg.target.options.ndId });
-
-    oldWay.nd = oldWay.nd.slice(0, ndIndex + 1);
-    newWay.nd = newWay.nd.slice(ndIndex);
-    newWay.$id = newWayId--;
-    newWay.$version = '1';
-    delete newWay.$user;
-    delete newWay.$uid;
-    delete newWay.$timestamp;
-
-    if (lanes['right' + oldWay.$id])
-        lanes['right' + oldWay.$id].setLatLngs(oldWay.nd.map(x => nodes[x.$ref]));
-
-    if (lanes['left' + oldWay.$id])
-        lanes['left' + oldWay.$id].setLatLngs(oldWay.nd.map(x => nodes[x.$ref]));
-
-    if (lanes['empty' + oldWay.$id])
-        lanes['empty' + oldWay.$id].setLatLngs(oldWay.nd.map(x => nodes[x.$ref]));
-
-    if (lanes['left'])
-        lanes['left'].setLatLngs(oldWay.nd.map(x => nodes[x.$ref]));
-
-    if (lanes['right'])
-        lanes['right'].setLatLngs(oldWay.nd.map(x => nodes[x.$ref]));
-
-    for (var marker in markers) {
-        markers[marker].remove();
-        delete markers[marker];
-    }
-
-    ways[newWay.$id] = newWay;
-    parseWay(newWay);
-
-    change.osmChange.create.way.push(newWay);
-
-    if (oldWay.$id > 0) {
-        var index = change.osmChange.modify.way.findIndex(x => x.$id == oldWay.$id);
-        if (index > -1)
-            change.osmChange.modify.way[index] = oldWay;
-        else
-            change.osmChange.modify.way.push(oldWay);
-    } else {
-        var index = change.osmChange.create.way.findIndex(x => x.$id == oldWay.$id);
-        if (index > -1)
-            change.osmChange.create.way[index] = oldWay;
-        else
-            change.osmChange.create.way.push(oldWay);
-    }
-
-    changesCount = change.osmChange.modify.way.length + change.osmChange.create.way.length;
-    document.getElementById('saveChangeset').innerText = 'Save (' + changesCount + ')';
-    document.getElementById('saveChangeset').style.display = 'block';
-}
-
-function oninputTimeIntervalTag() {
-    var side = this.name.split(':')[2];
-    if (this.value === '')
-        document.getElementById('parking:condition:' + side + ':default').style.display = 'none';
-    else
-        document.getElementById('parking:condition:' + side + ':default').style.display = '';
 }
 
 function addOrUpdate() {
@@ -1069,16 +778,6 @@ function addOrUpdate() {
     }
 
     save({ target: this.form });
-}
-
-function chooseSideTags(form, side) {
-    var regex = new RegExp('^parking:.*' + side);
-
-    for (var input of form)
-        if (regex.test(input.name) && input.value != '')
-            return true;
-
-    return false;
 }
 
 function formToOsmWay(form) {
