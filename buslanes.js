@@ -370,10 +370,10 @@ function isPsvLane(side, tags) {
 }
 
 function isBusRoad(tags) {
-    return (tags.find(tg => tg.$k == 'bus' && tg.$v == 'yes'))
+    return (tags.find(tg => tg.$k == 'bus' && (tg.$v == 'yes' || tg.$v == 'designated')))
 }
 function isPsvRoad(tags) {
-    return (tags.find(tg => tg.$k == 'psv' && tg.$v == 'yes'))
+    return (tags.find(tg => tg.$k == 'psv' && (tg.$v == 'yes' || tg.$v == 'designated')))
 }
 
 function isDedicatedHighway(tags) {
@@ -464,7 +464,7 @@ function getQueryBusLanes() {
         var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
         return editorMode
             ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
-            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
+            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes|designated"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
     }
 }
 
@@ -570,8 +570,8 @@ function getLaneInfoPanelContent(osm) {
                 tagsBlock.id = 'middle';
                 tagsBlock.innerHTML = tags
                     .filter(tag =>
-                        (tag.$k == 'bus' && tag.$v == 'yes') ||
-                        (tag.$k == 'psv' && tag.$v == 'yes') ||
+                        (tag.$k == 'bus' && (tag.$v == 'yes' || tag.$v == 'designated')) ||
+                        (tag.$k == 'psv' && (tag.$v == 'yes' || tag.$v == 'designated')) ||
                         (tag.$k == 'motor_vehicle' && tag.$v == 'no') ||
                         (tag.$k == 'access' && tag.$v == 'no'))
                     .map(tag => tag.$k + ' = ' + tag.$v)
