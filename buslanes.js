@@ -158,7 +158,7 @@ var saving = false;
 
 var viewMinZoom = 14;
 
-var highwayRegex = new RegExp('^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service');
+var highwayRegex = new RegExp('^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|busway');
 
 
 // ------------- functions -------------------
@@ -377,7 +377,8 @@ function isPsvRoad(tags) {
 }
 
 function isDedicatedHighway(tags) {
-    return isPsvRoad(tags) || isBusRoad(tags);
+    return tags.find(tg => tg.$k == 'highway' && tg.$v == 'busway') ||
+        isPsvRoad(tags) || isBusRoad(tags);
 }
 
 function wayIsMajor(tags){
@@ -391,7 +392,7 @@ function wayIsMajor(tags){
 }
 
 function wayIsService(tags){
-    if (tags.find(x => x.$k == 'highway' && x.$v == 'service'))
+    if (tags.find(x => x.$k == 'highway' && (x.$v == 'service' || x.$v == 'busway')))
         return true;
     return false;
 }
@@ -463,15 +464,15 @@ function getQueryBusLanes() {
     } else {
         var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
         return editorMode
-            ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
-            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes|designated"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
+            ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|busway"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
+            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes|designated"](' + bbox + ');way["highway"="busway"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
     }
 }
 
 function getQueryHighways() {
     var bounds = map.getBounds();
     var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
-    var tag = 'highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service"';
+    var tag = 'highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|busway"';
     return '[out:xml];(way[' + tag + '](' + bbox + ');>;way[' + tag + '](' + bbox + ');<;);out meta;';
 }
 

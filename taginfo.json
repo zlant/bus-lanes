@@ -16,6 +16,7 @@
         { "key": "highway", "value": "unclassified", "object_types": [ "way" ], "description": "major road" },
         { "key": "highway", "value": "residential", "object_types": [ "way" ], "description": "major road" },
         { "key": "highway", "value": "service", "object_types": [ "way" ], "description": "candidate for bus/psv dedicated road" },
+        { "key": "highway", "value": "busway", "object_types": [ "way" ], "description": "dedicated bus road" },
 
         { "key": "lanes:bus",  "object_types": [ "way" ] },
         { "key": "lanes:bus", "value": "2", "object_types": [ "way" ] },
