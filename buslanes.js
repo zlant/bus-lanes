@@ -1,4 +1,4 @@
-﻿var map = L.map('map', { fadeAnimation: false });
+var map = L.map('map', { fadeAnimation: false });
 var hash = new L.Hash(map);
 
 if (document.location.href.indexOf('#') == -1)
@@ -346,12 +346,12 @@ function isBusLane(side, tags) {
     var buswayRegex = new RegExp('^busway:(?:both|' + side + ')$');
 
     if (side == 'right' &&
-        tags.find(x => (x.$k == 'lanes:bus:forward' || x.$k == 'lanes:bus') ||
+        tags.find(x => ((x.$k == 'lanes:bus:forward' || x.$k == 'lanes:bus') && x.$v != '0') ||
             (buswayRegex.test(x.$k) && x.$v == 'lane') ||
             (x.$k == 'busway' && x.$v == 'lane' && !tags.find(tg => tg.$k == 'oneway' && tg.$v == '-1'))))
         return true;
     else if (side == 'left' &&
-        tags.find(x => (x.$k == 'lanes:bus:backward' || (x.$k == 'lanes:bus' && /^[2-9]$/.test(x.$v))) ||
+        tags.find(x => ((x.$k == 'lanes:bus:backward' && x.$v != '0') || (x.$k == 'lanes:bus' && /^[2-9]$/.test(x.$v))) ||
             (buswayRegex.test(x.$k) && x.$v == 'lane') ||
             (x.$k == 'busway' && x.$v == 'opposite_lane') ||
             (x.$k == 'busway' && x.$v == 'lane' && !tags.find(tg => tg.$k == 'oneway' && tg.$v == 'yes'))))
@@ -361,10 +361,10 @@ function isBusLane(side, tags) {
 
 function isPsvLane(side, tags) {
     if (side == 'right' &&
-        tags.find(x => x.$k == 'lanes:psv:forward' || x.$k == 'lanes:psv'))
+        tags.find(x => ((x.$k == 'lanes:psv:forward' || x.$k == 'lanes:psv') && x.$v != '0')))
         return true;
     else if (side == 'left' &&
-        tags.find(x => x.$k == 'lanes:psv:backward' || (x.$k == 'lanes:psv' && /^[2-9]$/.test(x.$v))))
+        tags.find(x => ((x.$k == 'lanes:psv:backward' && x.$v != '0') || (x.$k == 'lanes:psv' && /^[2-9]$/.test(x.$v)))))
         return true;
     return false;
 }
@@ -559,8 +559,8 @@ function getLaneInfoPanelContent(osm) {
             if (isBusLane(side, tags) || isPsvLane(side, tags)) {
                 tagsBlock.id = side;
                 tagsBlock.innerHTML = tags
-                    .filter(tag => regex.test(tag.$k) ||
-                        (tag.$k == 'lanes:bus' && (side == 'left' ? /^[2-9]$/.test(tag.$v) : true)) ||
+                    .filter(tag => (regex.test(tag.$k) && tag.$v != '0') ||
+                        (tag.$k == 'lanes:bus' && tag.$v != '0' && (side == 'left' ? /^[2-9]$/.test(tag.$v) : true)) ||
                         (buswayRegex.test(tag.$k) && tag.$v == 'lane') ||
                         (side == 'left' && tag.$k == 'busway' && tag.$v == 'opposite_lane'))
                     .map(tag => tag.$k + ' = ' + tag.$v)
