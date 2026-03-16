@@ -465,7 +465,7 @@ function getQueryBusLanes() {
         var bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(',');
         return editorMode
             ? '[out:xml];(way[highway~"^motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|busway"](' + bbox + ');)->.a;(.a;.a >;.a <;);out meta;'
-            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|motor_vehicle"~"no"][~"psv|bus"~"yes|designated"](' + bbox + ');way["highway"="busway"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
+            : '[out:xml];(way["highway"][~"^(lanes:(psv|bus)|busway).*"~"."](' + bbox + ');way["highway"][~"access|vehicle|motor_vehicle"~"no"][~"psv|bus"~"yes|designated"](' + bbox + ');way["highway"="busway"](' + bbox + ');)->.a;(.a;.a >;);out meta;';
     }
 }
 
